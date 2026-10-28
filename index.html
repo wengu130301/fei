@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>赛博功德寺 · 猫神办事处</title>
+<style>
+  :root{
+    --gold:#d4af37;
+    --gold-dim:#8a7226;
+    --ink:#ece3cf;
+    --paper:#e9e1cd;
+    --red:#3a0e0e;
+    --bg:#0a0605;
+    --neon:#ff4a6e;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;min-height:100%}
+  body{
+    background:
+      radial-gradient(ellipse at 50% -10%, #2a0d0b 0%, #120808 42%, #080504 100%);
+    color:var(--ink);
+    font-family:"Songti SC","STSong","SimSun","PingFang SC",serif;
+    min-height:100vh;
+    display:flex;flex-direction:column;align-items:center;
+    padding:0 0 46px;
+    overflow-x:hidden;
+    position:relative;
+  }
+  /* 香火烟雾 */
+  .smokeWrap{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+  .smoke{
+    position:absolute;bottom:-30vh;
+    width:40vw;height:70vh;border-radius:50%;
+    background:radial-gradient(ellipse at center, rgba(212,175,55,.075), transparent 66%);
+    filter:blur(26px);
+    animation:smokeUp linear infinite;
+  }
+  @keyframes smokeUp{
+    from{transform:translateY(0) scale(1);opacity:0}
+    18%{opacity:1}
+    82%{opacity:.7}
+    to{transform:translateY(-118vh) scale(1.7);opacity:0}
+  }
+  /* 背景符咒纹理 */
+  .runeLayer{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.045;
+    background-image:radial-gradient(circle, var(--gold) 1px, transparent 1px);
+    background-size:34px 34px;}
+
+  .page{position:relative;z-index:2;width:min(720px,94vw);display:flex;flex-direction:column;align-items:center}
+
+  /* ---------- 匾额 ---------- */
+  #plaque{
+    margin-top:26px;
+    padding:16px 40px 18px;
+    background:linear-gradient(180deg,#170b08,#0d0605);
+    border:1px solid rgba(212,175,55,.55);
+    box-shadow:0 0 0 5px #0a0605, 0 0 0 6px rgba(212,175,55,.24),
+               0 0 46px rgba(212,175,55,.12), inset 0 0 34px rgba(212,175,55,.07);
+    text-align:center;position:relative;
+  }
+  #plaque h1{
+    margin:0;font-size:clamp(22px,4.4vw,34px);
+    letter-spacing:.42em;text-indent:.42em;
+    color:var(--gold);font-weight:700;
+    text-shadow:0 0 22px rgba(212,175,55,.45),0 0 3px rgba(212,175,55,.9);
+  }
+  #plaque .sub{
+    margin:9px 0 0;font-size:10.5px;letter-spacing:.3em;
+    color:#8a7c5c;text-indent:.3em;
+  }
+  #plaque .lantern{
+    position:absolute;top:-9px;width:9px;height:9px;border-radius:50%;
+    background:var(--neon);box-shadow:0 0 18px var(--neon),0 0 40px rgba(255,74,110,.5);
+    animation:lanternPulse 2.4s ease-in-out infinite;
+  }
+  #plaque .lantern.l{left:-4px}
+  #plaque .lantern.r{right:-4px;animation-delay:1.1s}
+  @keyframes lanternPulse{0%,100%{opacity:.55;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
+
+  /* ---------- 猫神 ---------- */
+  #catStage{
+    margin-top:22px;position:relative;
+    width:min(260px,60vw);
+    aspect-ratio:1/1;
+  }
+  #catSvg{width:100%;height:100%;display:block;overflow:visible}
+  #catSvg .halo{
+    transform-box:fill-box;transform-origin:center;
+    animation:spin 26s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #catSvg .eyeG{
+    transform-box:fill-box;transform-origin:center;
+    animation:blink 6.5s infinite;
+  }
+  @keyframes blink{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.08)}}
+
+  /* 猫神气泡 */
+  #catBubble{
+    position:absolute;left:50%;top:-6px;transform:translate(-50%,-100%);
+    background:#120a08;border:1px solid rgba(212,175,55,.45);
+    color:#e3d9bd;font-size:12px;letter-spacing:.05em;line-height:1.6;
+    padding:8px 13px;white-space:nowrap;max-width:78vw;
+    opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;
+    box-shadow:0 8px 30px rgba(0,0,0,.7);
+  }
+  #catBubble.on{opacity:1;transform:translate(-50%,-100%) translateY(-4px)}
+  #catBubble::after{
+    content:'';position:absolute;left:50%;bottom:-6px;margin-left:-5px;
+    width:10px;height:10px;background:#120a08;
+    border-right:1px solid rgba(212,175,55,.45);
+    border-bottom:1px solid rgba(212,175,55,.45);
+    transform:rotate(45deg);
+  }
+
+  /* ---------- 功德 ---------- */
+  #meritWrap{margin-top:6px;text-align:center}
+  #meritLabel{font-size:10px;letter-spacing:.46em;color:#7d6f52;text-indent:.46em}
+  #merit{
+    font-size:clamp(46px,11vw,80px);font-weight:700;line-height:1.05;
+    color:var(--gold);
+    font-variant-numeric:tabular-nums;
+    text-shadow:0 0 30px rgba(212,175,55,.4),0 0 2px rgba(212,175,55,.8);
+    transition:transform .18s cubic-bezier(.2,.9,.3,1.6),color .2s;
+    display:inline-block;
+  }
+  #merit.bump{transform:scale(1.09)}
+  #merit.down{color:#ff4a6e;text-shadow:0 0 30px rgba(255,74,110,.5)}
+  #meritUnit{font-size:12px;letter-spacing:.3em;color:#7d6f52;margin-left:6px}
+
+  /* ---------- 木鱼 ---------- */
+  #muyu{
+    margin-top:20px;
+    width:min(196px,52vw);height:min(196px,52vw);
+    border-radius:50%;
+    border:2px solid rgba(212,175,55,.5);
+    background:
+      radial-gradient(circle at 36% 30%, #6b4a24, #3a2411 58%, #1c1109 100%);
+    color:#f3e4c0;
+    font-family:inherit;
+    font-size:clamp(18px,4vw,24px);
+    letter-spacing:.2em;text-indent:.2em;
+    cursor:pointer;position:relative;
+    box-shadow:0 12px 40px rgba(0,0,0,.7),inset 0 3px 16px rgba(255,220,150,.14),
+               inset 0 -10px 26px rgba(0,0,0,.6);
+    transition:transform .09s ease-out,box-shadow .25s;
+    outline:none;
+  }
+  #muyu::before{
+    content:'';position:absolute;inset:-13px;border-radius:50%;
+    border:1px dashed rgba(212,175,55,.24);
+    animation:spin 34s linear infinite reverse;pointer-events:none;
+  }
+  #muyu:active,#muyu.strike{
+    transform:scale(.93);
+    box-shadow:0 4px 16px rgba(0,0,0,.7),inset 0 2px 24px rgba(255,220,150,.3);
+  }
+  #muyuHint{margin-top:10px;font-size:10.5px;letter-spacing:.24em;color:#5d5340}
+
+  /* ---------- 功能按钮 ---------- */
+  #actions{
+    margin-top:26px;width:100%;
+    display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+  }
+  .act{
+    padding:13px 8px;
+    background:linear-gradient(180deg,rgba(24,13,10,.9),rgba(12,7,5,.9));
+    border:1px solid rgba(212,175,55,.3);
+    color:#cbbd97;font-family:inherit;font-size:12.5px;letter-spacing:.16em;
+    cursor:pointer;transition:.22s;position:relative;
+    display:flex;flex-direction:column;align-items:center;gap:5px;
+  }
+  .act small{font-size:9px;letter-spacing:.1em;color:#6d6349}
+  .act:hover{border-color:rgba(212,175,55,.8);color:var(--gold);background:linear-gradient(180deg,rgba(40,22,14,.95),rgba(16,9,6,.95))}
+  .act:disabled{opacity:.38;cursor:not-allowed}
+
+  /* ---------- 结果面板 ---------- */
+  #panel{
+    margin-top:18px;width:100%;
+    border:1px solid rgba(212,175,55,.26);
+    background:linear-gradient(180deg,rgba(18,11,8,.85),rgba(9,6,4,.85));
+    padding:20px 20px 22px;
+    min-height:120px;
+    position:relative;
+  }
+  #panel::before{
+    content:'※ 本寺批文 ※';
+    position:absolute;top:-9px;left:50%;transform:translateX(-50%);
+    background:#0b0605;padding:0 12px;
+    font-size:9.5px;letter-spacing:.3em;color:#6d6349;
+  }
+  #panelBody{font-size:13.5px;line-height:2;color:#cbbd97;letter-spacing:.03em;white-space:pre-wrap}
+  #panelBody .lv{
+    display:inline-block;padding:3px 12px;margin-bottom:12px;
+    border:1px solid var(--gold);color:var(--gold);
+    font-size:12px;letter-spacing:.3em;text-indent:.3em;
+  }
+  #panelBody .lv.bad{border-color:var(--neon);color:var(--neon)}
+  #panelBody .lv.weird{border-color:#7fb4c9;color:#7fb4c9}
+  #panelBody .tip{color:#7d6f52;font-size:12px}
+  #panelBody .meow{font-size:20px;letter-spacing:.08em;color:#e3c98a;line-height:1.7}
+  #panelBody .note{color:#6d6349;font-size:11.5px}
+
+  /* ---------- 翻译器 ---------- */
+  #transRow{display:flex;gap:8px;margin-bottom:12px}
+  #transInput{
+    flex:1;min-width:0;padding:10px 12px;
+    background:#0d0806;border:1px solid rgba(212,175,55,.28);
+    color:var(--ink);font-family:inherit;font-size:13px;outline:none;
+  }
+  #transInput:focus{border-color:rgba(212,175,55,.8)}
+  #transGo{
+    padding:10px 16px;background:transparent;
+    border:1px solid rgba(212,175,55,.5);color:var(--gold);
+    font-family:inherit;font-size:12px;letter-spacing:.16em;cursor:pointer;transition:.2s;
+  }
+  #transGo:hover{background:rgba(212,175,55,.12)}
+
+  /* ---------- 排行榜 ---------- */
+  #rank{margin-top:16px;width:100%;font-size:11.5px;color:#6d6349;letter-spacing:.06em}
+  #rank .row{
+    display:flex;justify-content:space-between;padding:7px 2px;
+    border-bottom:1px dotted rgba(212,175,55,.16);
+  }
+  #rank .row.me{color:#cbbd97}
+  #rank .row .n{color:#7d6f52}
+  #rank .row.me .n{color:var(--gold)}
+
+  footer{
+    position:relative;z-index:2;margin-top:26px;width:min(720px,94vw);
+    font-size:10px;line-height:1.9;color:#4a4133;letter-spacing:.08em;
+    text-align:center;border-top:1px solid rgba(212,175,55,.12);padding-top:14px;
+  }
+
+  /* ---------- 飘字 ---------- */
+  .float{
+    position:fixed;z-index:80;pointer-events:none;
+    font-size:19px;font-weight:700;color:var(--gold);
+    text-shadow:0 0 16px rgba(212,175,55,.7);
+    animation:floatUp 1.5s ease-out forwards;
+    white-space:nowrap;
+  }
+  .float.neg{color:var(--neon);text-shadow:0 0 16px rgba(255,74,110,.7)}
+  @keyframes floatUp{
+    0%{opacity:0;transform:translateY(0) scale(.7)}
+    18%{opacity:1;transform:translateY(-12px) scale(1.06)}
+    100%{opacity:0;transform:translateY(-96px) scale(.94)}
+  }
+
+  /* 掉落的香灰 */
+  .ash{
+    position:fixed;z-index:79;pointer-events:none;
+    width:2px;height:2px;border-radius:50%;background:#ffb35c;
+    box-shadow:0 0 6px #ff8a2c;
+    animation:ashFall linear forwards;
+  }
+  @keyframes ashFall{
+    from{opacity:.95;transform:translateY(0)}
+    to{opacity:0;transform:translateY(70vh) translateX(var(--drift))}
+  }
+
+  /* 上香动画 */
+  #incense{
+    position:fixed;left:50%;bottom:12vh;transform:translateX(-50%);
+    z-index:78;pointer-events:none;font-size:34px;
+    animation:incenseUp 3.4s ease-out forwards;
+  }
+  @keyframes incenseUp{
+    0%{opacity:0;transform:translateX(-50%) translateY(16px) scale(.8)}
+    16%{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+    72%{opacity:1}
+    100%{opacity:0;transform:translateX(-50%) translateY(-40px) scale(.9)}
+  }
+
+  @media (max-width:430px){
+    #actions{grid-template-columns:1fr;gap:8px}
+    .act{flex-direction:row;justify-content:center;gap:8px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001s !important}
+  }
+</style>
+</head>
+<body>
+
+<div class="runeLayer"></div>
+<div class="smokeWrap" id="smokeWrap"></div>
+
+<div class="page">
+
+  <div id="plaque">
+    <span class="lantern l"></span>
+    <span class="lantern r"></span>
+    <h1>赛博功德寺</h1>
+    <p class="sub">猫 神 办 事 处 · 第 404 号窗口</p>
+  </div>
+
+  <div id="catStage">
+    <div id="catBubble">本喵已上线。</div>
+    <svg id="catSvg" viewBox="0 0 240 220" aria-label="猫神">
+      <circle class="halo" cx="120" cy="108" r="99" fill="none"
+              stroke="rgba(212,175,55,.32)" stroke-width="1" stroke-dasharray="3 9"/>
+      <circle cx="120" cy="108" r="88" fill="none" stroke="rgba(212,175,55,.12)" stroke-width="1"/>
+
+      <!-- 耳朵 -->
+      <path d="M62 82 L46 26 L96 56 Z" fill="#180f0b" stroke="#b8912f" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M178 82 L194 26 L144 56 Z" fill="#180f0b" stroke="#b8912f" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M68 74 L58 40 L88 58 Z" fill="rgba(255,74,110,.22)"/>
+      <path d="M172 74 L182 40 L152 58 Z" fill="rgba(255,74,110,.22)"/>
+
+      <!-- 头 -->
+      <ellipse cx="120" cy="112" rx="72" ry="62" fill="#180f0b" stroke="#b8912f" stroke-width="2"/>
+
+      <!-- 眼睛 -->
+      <g class="eyeG">
+        <ellipse cx="94" cy="104" rx="16" ry="19" fill="#d4af37"/>
+        <circle class="pupil" id="pupilL" cx="94" cy="104" r="6.5" fill="#0a0605"/>
+      </g>
+      <g class="eyeG">
+        <ellipse cx="146" cy="104" rx="16" ry="19" fill="#d4af37"/>
+        <circle class="pupil" id="pupilR" cx="146" cy="104" r="6.5" fill="#0a0605"/>
+      </g>
+
+      <!-- 鼻子与嘴 -->
+      <path d="M120 126 l-6 6 h12 z" fill="#ff7a95"/>
+      <path d="M120 132 q-9 10 -17 2" fill="none" stroke="#b8912f" stroke-width="1.8" stroke-linecap="round"/>
+      <path d="M120 132 q9 10 17 2" fill="none" stroke="#b8912f" stroke-width="1.8" stroke-linecap="round"/>
+
+      <!-- 胡须 -->
+      <path d="M52 106 h-24 M52 116 h-22 M52 126 h-20" stroke="rgba(212,175,55,.55)" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M188 106 h24 M188 116 h22 M188 126 h20" stroke="rgba(212,175,55,.55)" stroke-width="1.4" stroke-linecap="round"/>
+
+      <!-- 披帛 -->
+      <path d="M62 158 q58 30 116 0" fill="none" stroke="rgba(255,74,110,.5)" stroke-width="2.4" stroke-linecap="round"/>
+    </svg>
+  </div>
+
+  <div id="meritWrap">
+    <div id="meritLabel">功 德</div>
+    <div><span id="merit">0</span><span id="meritUnit">点</span></div>
+  </div>
+
+  <button id="muyu" type="button">咚</button>
+  <p id="muyuHint">点击木鱼，积累功德 · 也可按空格</p>
+
+  <div id="actions">
+    <button class="act" id="btnDraw" type="button">求 签<small>消耗 88 功德</small></button>
+    <button class="act" id="btnTrans" type="button">猫语翻译<small>免费 · 但不准确</small></button>
+    <button class="act" id="btnIncense" type="button">赛博上香<small>免费 · 但可能扣功德</small></button>
+  </div>
+
+  <div id="panel">
+    <div id="panelBody">本寺今日正常营业。
+窗口人员（一只猫）情绪不稳定，请勿投喂。</div>
+  </div>
+
+  <div id="rank">
+    <div class="row"><span class="n">你</span><span id="rankMe">0</span></div>
+    <div class="row"><span class="n">隔壁王居士</span><span id="rankWang">0</span></div>
+    <div class="row"><span class="n">一只真的猫（无账号）</span><span id="rankCat">0</span></div>
+  </div>
+
+</div>
+
+<footer>
+  本寺不提供心理咨询、不提供退款、不提供意义。<br>
+  功德仅在本页面内有效，不可转让、不可提现、不可带出去。<br>
+  若您感到人生困惑，请继续敲木鱼。这是本寺唯一建议。
+</footer>
+
+<script>
+(function(){
+  'use strict';
+
+  var merit = 0;
+  var lastStrike = Date.now();
+  var audioCtx = null;
+
+  function $(id){ return document.getElementById(id); }
+  function pick(a){ return a[Math.floor(Math.random() * a.length)]; }
+
+  function ac(){
+    if (audioCtx === null){
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch(e){ audioCtx = false; }
+    }
+    return audioCtx;
+  }
+  function tone(freq, dur, type, vol, slideTo){
+    var c = ac(); if (!c) return;
+    try{
+      var o = c.createOscillator(), g = c.createGain();
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(freq, c.currentTime);
+      if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, c.currentTime + dur);
+      g.gain.setValueAtTime(vol || .1, c.currentTime);
+      g.gain.exponentialRampToValueAtTime(.0001, c.currentTime + dur);
+      o.connect(g); g.connect(c.destination);
+      o.start(); o.stop(c.currentTime + dur + .02);
+    }catch(e){}
+  }
+  // 木鱼声：低频闷响
+  function muyuSound(){
+    tone(196, .16, 'sine', .22, 82);
+    tone(420, .05, 'triangle', .07, 200);
+  }
+
+  /* ================= 烟雾 ================= */
+  (function makeSmoke(){
+    var wrap = $('smokeWrap');
+    for (var i = 0; i < 5; i++){
+      var d = document.createElement('div');
+      d.className = 'smoke';
+      d.style.left = (6 + Math.random() * 82) + 'vw';
+      d.style.animationDuration = (16 + Math.random() * 14) + 's';
+      d.style.animationDelay = (Math.random() * -18) + 's';
+      wrap.appendChild(d);
+    }
+  })();
+
+  /* ================= 猫眼跟随 ================= */
+  var pupilL = $('pupilL'), pupilR = $('pupilR');
+  var BASE_L = {x: 94, y: 104}, BASE_R = {x: 146, y: 104};
+  window.addEventListener('mousemove', function(e){
+    var svg = $('catSvg');
+    var r = svg.getBoundingClientRect();
+    if (!r.width) return;
+    var cx = r.left + r.width / 2;
+    var cy = r.top + r.height * (108 / 220);
+    var dx = (e.clientX - cx) / r.width;
+    var dy = (e.clientY - cy) / r.height;
+    var m = Math.min(1, Math.sqrt(dx * dx + dy * dy) || 0);
+    var ox = Math.max(-1, Math.min(1, dx * 2.6)) * 6 * Math.max(.35, m);
+    var oy = Math.max(-1, Math.min(1, dy * 2.6)) * 6 * Math.max(.35, m);
+    pupilL.setAttribute('cx', (BASE_L.x + ox).toFixed(1));
+    pupilL.setAttribute('cy', (BASE_L.y + oy).toFixed(1));
+    pupilR.setAttribute('cx', (BASE_R.x + ox).toFixed(1));
+    pupilR.setAttribute('cy', (BASE_R.y + oy).toFixed(1));
+  }, { passive: true });
+
+  /* ================= 猫神说话 ================= */
+  var bubbleTimer = null;
+  function say(text, ms){
+    var b = $('catBubble');
+    b.textContent = text;
+    b.classList.add('on');
+    if (bubbleTimer) window.clearTimeout(bubbleTimer);
+    bubbleTimer = window.setTimeout(function(){ b.classList.remove('on'); }, ms || 2600);
+  }
+  var IDLE_WORDS = [
+    '你怎么不敲了？',
+    '本喵在看着你敲。',
+    '功德不会自己进来。',
+    '再敲一下。就一下。',
+    '你上一次笑是什么时候？算了，别回答。',
+    '本喵今天已经处理了 3 个愿望，全部失败。',
+    '你的手停下的时候，宇宙会安静 0.2 秒。',
+    '敲吧。反正也没别的事可做。'
+  ];
+  window.setInterval(function(){
+    if (Date.now() - lastStrike > 11000 && Math.random() < .55){
+      say(pick(IDLE_WORDS));
+    }
+  }, 4200);
+
+  /* ================= 功德渲染 ================= */
+  function fmt(n){
+    if (n >= 100000) return '？？？';
+    if (n >= 10000) return (n / 10000).toFixed(n % 10000 === 0 ? 0 : 2) + '万';
+    return String(n);
+  }
+  function renderMerit(){
+    $('merit').textContent = fmt(merit);
+    $('rankMe').textContent = fmt(merit);
+    $('rankCat').textContent = fmt(Math.max(merit + 3, Math.floor(merit * 1.31) + 7));
+    $('rankWang').textContent = fmt(Math.max(12, Math.floor(merit * 0.62) + 4));
+  }
+  function bump(el, cls){
+    var m = $('merit');
+    m.classList.add(cls);
+    window.setTimeout(function(){ m.classList.remove(cls); }, 220);
+  }
+
+  function floatText(text, x, y, neg){
+    var d = document.createElement('div');
+    d.className = 'float' + (neg ? ' neg' : '');
+    d.textContent = text;
+    d.style.left = x + 'px';
+    d.style.top = y + 'px';
+    document.body.appendChild(d);
+    window.setTimeout(function(){ if (d.parentNode) d.parentNode.removeChild(d); }, 1550);
+  }
+
+  /* ================= 敲木鱼 ================= */
+  var muyu = $('muyu');
+  var STRIKE_PHRASES = [
+    '功德 +1',
+    '功德 +1',
+    '功德 +1',
+    '功德 +1',
+    '功德 +1',
+    '功德 +2',
+    '功德 +1（含税）',
+    '功德 +1，已计入来世'
+  ];
+  var BAD_PHRASES = [
+    '功德 -10086',
+    '功德 -88，原因：敲太响',
+    '功德 -1，隔壁投诉了',
+    '功德 -520，猫神不高兴'
+  ];
+
+  function strike(){
+    lastStrike = Date.now();
+    muyu.classList.add('strike');
+    window.setTimeout(function(){ muyu.classList.remove('strike'); }, 110);
+    muyuSound();
+
+    var r = muyu.getBoundingClientRect();
+    var px = r.left + r.width / 2 - 30 + (Math.random() - .5) * 50;
+    var py = r.top + 6;
+
+    if (Math.random() < 0.045){
+      var loss = pick([10086, 88, 520, 1]);
+      merit = Math.max(0, merit - loss);
+      renderMerit();
+      bump(null, 'down');
+      floatText(pick(BAD_PHRASES), px, py, true);
+      tone(140, .5, 'sawtooth', .1, 60);
+      say(pick([
+        '哦。系统刚才出错了。',
+        '本喵没有扣你的功德。是网络扣的。',
+        '这是测试。你通过了。功德没退。',
+        '刚才那一下不算。算别人的。'
+      ]));
+    } else {
+      var add = Math.random() < .12 ? 2 : 1;
+      merit += add;
+      renderMerit();
+      bump(null, 'bump');
+      floatText(pick(STRIKE_PHRASES), px, py, false);
+    }
+
+    if (merit === 66) say('六十六。这个数字在本寺属于敏感数字。');
+    if (merit === 88) say('到 88 了。你可以求签了。但也可以不求。');
+    if (merit === 250) say('二百五。本喵什么都没说。');
+  }
+
+  muyu.addEventListener('click', strike);
+  window.addEventListener('keydown', function(e){
+    if (e.code === 'Space' || e.key === ' '){
+      var tag = (document.activeElement && document.activeElement.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      e.preventDefault();
+      strike();
+    }
+  });
+
+  /* ================= 求签 ================= */
+  var FORTUNES = [
+    { lv:'上上签', cls:'', text:'你将在本周内获得一次免费的、无人认领的沉默。\n它不是给你的，但没人来领。', tip:'宜：不动　忌：动' },
+    { lv:'上上签', cls:'', text:'你点的外卖会准时到达。\n但它不是你的。请温柔地转交给隔壁。', tip:'宜：核对订单　忌：核对人生' },
+    { lv:'中签', cls:'weird', text:'有一个人在今天想起了你，然后摇了摇头。\n这不是坏事。他摇的是蚊子。', tip:'宜：开窗　忌：深思' },
+    { lv:'中签', cls:'weird', text:'你会收到一条「在吗」。\n本寺建议你假装没看见。这是本寺能给出的最好建议。', tip:'宜：静音　忌：秒回' },
+    { lv:'下下签', cls:'bad', text:'你今天会想起一件十年前的尴尬事。\n它会持续 40 秒，并在你最忙的时候发生。', tip:'宜：深呼吸　忌：回忆' },
+    { lv:'下下签', cls:'bad', text:'你的手机电量将在关键时刻变成 1%。\n那个关键时刻是：没有任何关键时刻。', tip:'宜：充电　忌：相信百分比' },
+    { lv:'非签', cls:'weird', text:'此签不存在。\n请勿追问。追问也不会存在。', tip:'宜：放下　忌：拿起' },
+    { lv:'非签', cls:'weird', text:'本签由一只猫代填。\n它填的时候在睡觉，因此内容具有不确定性。', tip:'宜：睡觉　忌：清醒' },
+    { lv:'上上签', cls:'', text:'你将在 3 天内想起一句很久以前听过的歌词，\n并且想不起歌名。会持续到第 4 天。', tip:'宜：哼唱　忌：搜索' },
+    { lv:'中签', cls:'weird', text:'有一个按钮正在等你按。\n它与本寺无关，但本寺知道它存在。', tip:'宜：按　忌：不按' },
+    { lv:'下下签', cls:'bad', text:'你会在周一早上想起本页面。\n届时你会觉得此刻的自己有点奇怪。\n确实有点。', tip:'宜：接受　忌：解释' },
+    { lv:'上上签', cls:'', text:'恭喜。你已获得「今天不必解释自己」的临时许可。\n有效期至今晚 23:59，不可续期。', tip:'宜：沉默　忌：解释' }
+  ];
+
+  var DRAWING = false;
+  var btnDraw = $('btnDraw');
+  var panelBody = $('panelBody');
+
+  btnDraw.addEventListener('click', function(){
+    if (DRAWING) return;
+
+    if (merit < 88){
+      say('功德不足。你只有 ' + merit + ' 点。本喵不是慈善机构。');
+      panelBody.innerHTML = '<span class="note">功德不足（需 88 点，现有 ' + merit + ' 点）。\n请返回上方敲击木鱼。本寺不提供借贷服务，也不提供「先求签后补功德」。</span>';
+      tone(220, .2, 'square', .06, 110);
+      btnDraw.disabled = true;
+      window.setTimeout(function(){ btnDraw.disabled = false; }, 700);
+      return;
+    }
+
+    DRAWING = true;
+    merit -= 88;
+    renderMerit();
+    bump(null, 'down');
+    tone(520, .1, 'sine', .06, 300);
+    say('摇签中。请不要催。猫也要时间。');
+
+    var ticks = 0;
+    panelBody.textContent = '摇 签 中 　·　 请稍候';
+    var t = window.setInterval(function(){
+      ticks++;
+      panelBody.textContent = '摇 签 中 ' + Array(1 + (ticks % 4)).join('·') + ' 请稍候';
+      tone(700 + Math.random() * 300, .04, 'triangle', .03);
+      if (ticks >= 13){
+        window.clearInterval(t);
+        var f = pick(FORTUNES);
+        panelBody.innerHTML =
+          '<span class="lv ' + f.cls + '">' + f.lv + '</span>\n' +
+          f.text + '\n\n' +
+          '<span class="tip">' + f.tip + '</span>\n' +
+          '<span class="note">（签文由本寺第 404 号窗口出具，仅供参考，不具任何效力）</span>';
+        tone(660, .5, 'sine', .07, 990);
+        say(pick(['抽完了。不要问本喵准不准。', '签已出。本喵不负责任何后果。', '嗯。这个结果本喵也看不懂。']));
+        DRAWING = false;
+      }
+    }, 130);
+  });
+
+  /* ================= 猫语翻译 ================= */
+  var MEOW_SYLLABLES = ['喵', '咪', '嗷', '噜', '呜', '咕', '嘶', '啊', '哼'];
+  var MEOW_PUNC = ['。', '？', '！', '……', '？！', '。'];
+  var MEOW_MEANINGS = [
+    '你怎么还没开罐头',
+    '这个人可以睡，我批准了',
+    '我不是在看你，我是在看你身后的空气',
+    '这个杯子放在桌子边缘是正确的，我推它是在帮你',
+    '你刚才那句话说得不对，但我不打算纠正',
+    '我听见了，我选择不回应',
+    '你走了以后我一直在门口。我没有等你。我只是刚好在那里',
+    '这个家是我的，你是被允许的',
+    '现在是凌晨三点，我需要你醒着',
+    '我不是胖，我是积蓄',
+    '你身上有别的猫的味道。解释一下',
+    '我允许你摸三下。第四下我会咬你',
+    '人类的语言太多余了',
+    '我在你的键盘上躺着，这是在进行质量检测',
+    '我爱你。但我不会承认说过这句',
+    '这不是拆家，这是重新布局'
+  ];
+
+  function toMeow(text){
+    var len = Math.max(3, Math.min(14, text.length + 2));
+    var out = '';
+    for (var i = 0; i < len; i++){
+      out += MEOW_SYLLABLES[Math.floor(Math.random() * MEOW_SYLLABLES.length)];
+      out += (Math.random() < .3 ? '——' : '');
+    }
+    return out + MEOW_PUNC[Math.floor(Math.random() * MEOW_PUNC.length)];
+  }
+
+  $('btnTrans').addEventListener('click', function(){
+    var input = $('transInput');
+    if (!input){
+      panelBody.innerHTML =
+        '<div id="transRow">' +
+          '<input id="transInput" type="text" maxlength="24" placeholder="输入一句人话，比如：你好">' +
+          '<button id="transGo" type="button">翻译</button>' +
+        '</div>' +
+        '<span class="note">本翻译器由一只猫提供技术支持。它的准确率为 0%，但态度非常自信。</span>';
+      bindTrans();
+      $('transInput').focus();
+      say('翻译机已启动。本喵不保证准确。');
+      return;
+    }
+    $('transInput').focus();
+  });
+
+  function bindTrans(){
+    var go = $('transGo');
+    var input = $('transInput');
+    if (!go || !input) return;
+    go.addEventListener('click', doTrans);
+    input.addEventListener('keydown', function(e){
+      if (e.key === 'Enter'){ e.preventDefault(); doTrans(); }
+    });
+    input.addEventListener('focus', function(){ lastStrike = Date.now(); });
+  }
+
+  function doTrans(){
+    var input = $('transInput');
+    if (!input) return;
+    var txt = (input.value || '').trim();
+    if (!txt){
+      panelBody.innerHTML = '<span class="note">你什么都没输入。猫也用沉默回应了你。</span>';
+      return;
+    }
+    var meow = toMeow(txt);
+    var meaning = pick(MEOW_MEANINGS);
+    panelBody.innerHTML =
+      '<span class="meow">' + meow + '</span>\n\n' +
+      '<span class="note">↑ 以上为猫语原文</span>\n\n' +
+      '猫的原始意思：\n「' + meaning + '」\n\n' +
+      '<span class="tip">注：本翻译基于 0 份语料、1 只猫的记忆、以及大量猜测。</span>';
+    tone(880, .1, 'sine', .05, 1200);
+    tone(660, .16, 'sine', .05, 520);
+    say(pick(['翻译好了。别问依据。', '它说的就是这个意思。本喵确定。', '人类听不懂很正常。']));
+  }
+
+  /* ================= 赛博上香 ================= */
+  $('btnIncense').addEventListener('click', function(){
+    lastStrike = Date.now();
+
+    var inc = document.createElement('div');
+    inc.id = 'incense';
+    inc.textContent = '🕯';
+    document.body.appendChild(inc);
+    window.setTimeout(function(){ if (inc.parentNode) inc.parentNode.removeChild(inc); }, 3500);
+
+    tone(320, .5, 'sine', .05, 180);
+
+    for (var i = 0; i < 16; i++){
+      (function(i){
+        window.setTimeout(function(){
+          var a = document.createElement('div');
+          a.className = 'ash';
+          a.style.left = (window.innerWidth / 2 - 20 + Math.random() * 40) + 'px';
+          a.style.top = (window.innerHeight * .76) + 'px';
+          a.style.setProperty('--drift', ((Math.random() - .5) * 120).toFixed(0) + 'px');
+          a.style.animationDuration = (1.8 + Math.random() * 2) + 's';
+          document.body.appendChild(a);
+          window.setTimeout(function(){ if (a.parentNode) a.parentNode.removeChild(a); }, 4200);
+        }, i * 130);
+      })(i);
+    }
+
+    window.setTimeout(function(){
+      if (Math.random() < 0.22){
+        merit = Math.max(0, merit - 10086);
+        renderMerit();
+        bump(null, 'down');
+        panelBody.innerHTML =
+          '<span class="lv bad">上香失败</span>\n' +
+          '检测到：香插反了。\n' +
+          '系统判定为「倒香」，这是一种非常罕见且非常不吉利的操作。\n\n' +
+          '<span class="tip">功德 -10086。本寺不提供申诉渠道。</span>';
+        tone(120, .8, 'sawtooth', .09, 50);
+        say('你把香插反了。本喵第一次见。有点厉害。');
+      } else {
+        merit += 3;
+        renderMerit();
+        bump(null, 'bump');
+        panelBody.innerHTML =
+          '<span class="lv">上香成功</span>\n' +
+          '香烟已上达。功德 +3。\n' +
+          '上达的对象今日休假，香由值班的猫代收。\n\n' +
+          '<span class="tip">值班猫表示收到了，但不知道是什么。</span>';
+        say(pick(['香收到了。闻着还行。', '本喵代收了。你自己记着。', '上香完毕。请继续敲木鱼。']));
+      }
+    }, 900);
+  });
+
+  /* ================= 启动 ================= */
+  renderMerit();
+  window.setTimeout(function(){ say('本喵已上线。功德从 0 开始，宇宙也一样。', 3200); }, 700);
+  window.setTimeout(function(){ say('敲吧。'); }, 4600);
+
+  if (window.console && console.log){
+    console.log('%c赛博功德寺 · 猫神办事处', 'color:#d4af37;font-size:15px;');
+    console.log('%c本寺不提供退款。功德也不退。', 'color:#6d6349;');
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>请勿按下这个按钮</title>
+<style>
+  :root{
+    --ink:#eae7dd;
+    --dim:#6f6c64;
+    --acid:#c6ff4a;
+    --danger:#ff3b30;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0}
+  body{
+    overflow:hidden;
+    background:#07070a;
+    color:var(--ink);
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+    cursor:crosshair;
+    user-select:none;
+    -webkit-user-select:none;
+    transition:filter .18s linear;
+  }
+  .hidden{display:none !important}
+
+  /* ---------- 背景层 ---------- */
+  #grid{
+    position:fixed;inset:0;pointer-events:none;
+    background-image:
+      linear-gradient(rgba(160,170,200,.05) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(160,170,200,.05) 1px,transparent 1px);
+    background-size:46px 46px;
+    animation:gridmove 30s linear infinite;
+  }
+  @keyframes gridmove{from{background-position:0 0,0 0}to{background-position:46px 46px,46px 46px}}
+  #glow{
+    position:fixed;inset:0;pointer-events:none;
+    background:
+      radial-gradient(circle at 50% 50%,rgba(198,255,74,.10),transparent 52%),
+      radial-gradient(circle at 14% 92%,rgba(255,59,48,.10),transparent 46%);
+  }
+  #noise{position:fixed;inset:0;opacity:.05;pointer-events:none;mix-blend-mode:screen}
+
+  /* ---------- 顶部 HUD ---------- */
+  #hud{
+    position:fixed;top:0;left:0;right:0;z-index:50;
+    display:flex;align-items:center;gap:14px;
+    padding:11px 18px;
+    font-size:10.5px;letter-spacing:.16em;
+    color:var(--dim);
+    border-bottom:1px solid rgba(255,255,255,.06);
+    pointer-events:none;
+  }
+  #hud .cell{display:flex;align-items:baseline;gap:7px;white-space:nowrap}
+  #hud .cell.r{margin-left:auto}
+  #hud .lab{opacity:.62}
+  #hud .val{color:var(--ink);font-variant-numeric:tabular-nums;font-weight:700;letter-spacing:.05em}
+  .meter{flex:1;height:3px;background:#16161a;border-radius:3px;overflow:hidden;min-width:40px}
+  .meter i{display:block;height:100%;width:100%;
+    background:linear-gradient(90deg,#c6ff4a,#ffb03b,#ff3b30);
+    transition:width .45s cubic-bezier(.2,.9,.3,1)}
+
+  /* ---------- 标题 ---------- */
+  #kicker{
+    position:fixed;top:4.2vh;left:0;right:0;margin:0;text-align:center;
+    font-size:10px;letter-spacing:.42em;color:#4f4d47;
+    transition:transform .5s,opacity .5s;
+  }
+  #title{
+    position:fixed;top:8vh;left:0;right:0;margin:0;text-align:center;
+    font-size:clamp(26px,5vw,56px);
+    line-height:1.28;letter-spacing:.05em;font-weight:800;
+    transition:transform .45s cubic-bezier(.2,.9,.3,1.4),filter .3s,color .3s;
+    text-shadow:0 0 34px rgba(198,255,74,.10);
+  }
+  #title span{display:block;color:var(--acid)}
+  #title.glitching{filter:blur(.6px) hue-rotate(70deg)}
+
+  /* ---------- 主按钮 ---------- */
+  #btn{
+    --bx:0px; --by:0px;
+    position:fixed;left:50%;top:56%;
+    width:170px;height:170px;padding:0;margin:0;
+    border-radius:50%;
+    border:2px solid rgba(198,255,74,.55);
+    background:radial-gradient(circle at 36% 30%,#2b311d,#0c0e09 72%);
+    color:var(--acid);
+    font-family:inherit;
+    font-size:32px;letter-spacing:.14em;font-weight:700;
+    cursor:pointer;
+    z-index:20;
+    transform:translate(calc(-50% + var(--bx)),calc(-50% + var(--by)));
+    transition:transform .24s cubic-bezier(.16,.84,.3,1.35),
+               box-shadow .35s,border-color .35s,opacity .4s;
+    box-shadow:
+      0 0 0 1px rgba(198,255,74,.12),
+      0 0 48px rgba(198,255,74,.16),
+      inset 0 0 34px rgba(198,255,74,.09);
+    outline:none;
+    will-change:transform;
+  }
+  #btn::before{
+    content:'';position:absolute;inset:-16px;border-radius:50%;
+    border:1px solid rgba(198,255,74,.32);
+    animation:pulse 2.6s ease-out infinite;
+    pointer-events:none;
+  }
+  @keyframes pulse{0%{transform:scale(.88);opacity:.85}100%{transform:scale(1.4);opacity:0}}
+  #btn:hover{border-color:rgba(198,255,74,.95);box-shadow:0 0 0 1px rgba(198,255,74,.3),0 0 70px rgba(198,255,74,.3),inset 0 0 42px rgba(198,255,74,.16)}
+  #btn.hit{animation:hit .34s ease-out}
+  @keyframes hit{
+    0%{filter:brightness(2.6)}
+    100%{filter:brightness(1)}
+  }
+  #btn.tired{border-color:rgba(120,120,110,.4);color:#8a8878;opacity:.72}
+  #btnWord{pointer-events:none;display:block}
+
+  /* ---------- 副标题 ---------- */
+  #sub{
+    position:fixed;left:0;right:0;bottom:12.5vh;margin:0;
+    padding:0 24px;text-align:center;
+    font-size:clamp(12px,1.34vw,15px);
+    color:#a6a39a;line-height:1.7;min-height:2.4em;
+    transition:opacity .28s,transform .34s;
+    pointer-events:none;
+  }
+  #sub.swap{opacity:0;transform:translateY(6px)}
+
+  /* ---------- 体力条 ---------- */
+  #staminaBox{
+    position:fixed;left:50%;bottom:6.4vh;transform:translateX(-50%);
+    display:flex;align-items:center;gap:9px;
+    font-size:9.5px;letter-spacing:.2em;color:#55534d;pointer-events:none;
+  }
+  #staminaBox .sbar{width:min(38vw,190px);height:2px;background:#17171b;border-radius:2px;overflow:hidden}
+  #staminaBox .sbar i{display:block;height:100%;width:100%;background:#8ea53f;transition:width .25s linear,background .3s}
+  #staminaBox .sval{font-variant-numeric:tabular-nums;color:#8a8779;min-width:2.4em;text-align:right}
+
+  /* ---------- 页脚 ---------- */
+  #foot{
+    position:fixed;left:0;right:0;bottom:2vh;
+    display:flex;align-items:center;justify-content:center;gap:14px;
+    font-size:9.5px;letter-spacing:.16em;color:#3c3a35;
+    z-index:40;
+  }
+  #aboutBtn{
+    background:none;border:none;padding:2px 4px;
+    color:#55524b;font-family:inherit;font-size:9.5px;letter-spacing:.16em;
+    cursor:pointer;border-bottom:1px dotted #3a3833;
+  }
+  #aboutBtn:hover{color:var(--acid);border-color:var(--acid)}
+
+  /* ---------- 飘字 ---------- */
+  .toast{
+    position:fixed;z-index:70;pointer-events:none;
+    max-width:min(340px,74vw);
+    padding:9px 13px;
+    background:rgba(12,13,10,.92);
+    border:1px solid rgba(198,255,74,.28);
+    border-left:2px solid var(--acid);
+    color:#d8d5c9;
+    font-size:12.5px;line-height:1.55;
+    letter-spacing:.02em;
+    animation:toastIn .34s cubic-bezier(.16,.9,.3,1.4) forwards;
+    box-shadow:0 10px 40px rgba(0,0,0,.6);
+  }
+  @keyframes toastIn{from{opacity:0;transform:translateY(10px) scale(.94)}to{opacity:1;transform:translateY(0) scale(1)}}
+  .toast.out{animation:toastOut .5s ease-in forwards}
+  @keyframes toastOut{to{opacity:0;transform:translateY(-14px) scale(.96);filter:blur(3px)}}
+
+  /* ---------- 眼睛异象 ---------- */
+  #eyes{position:fixed;inset:0;z-index:60;pointer-events:none;opacity:0;transition:opacity .45s}
+  #eyes.on{opacity:1}
+  .eye{
+    position:absolute;width:30px;height:30px;border-radius:50%;
+    background:#eae7dd;
+    box-shadow:0 0 20px rgba(234,231,221,.45);
+    animation:eyeblink 1.5s ease-in-out infinite;
+  }
+  .eye::after{
+    content:'';position:absolute;left:9px;top:9px;
+    width:12px;height:12px;border-radius:50%;background:#08080a;
+  }
+  @keyframes eyeblink{0%,100%{transform:scaleY(1)}46%{transform:scaleY(.1)}}
+
+  /* ---------- 耳语 ---------- */
+  .whisper{
+    position:fixed;z-index:65;pointer-events:none;
+    font-size:22px;font-weight:800;letter-spacing:.1em;
+    color:rgba(255,59,48,.72);
+    white-space:nowrap;
+    animation:whisperGo 3.4s linear forwards;
+  }
+  @keyframes whisperGo{
+    from{transform:translateX(-16vw) rotate(var(--r));opacity:0}
+    12%{opacity:1}
+    88%{opacity:1}
+    to{transform:translateX(116vw) rotate(var(--r));opacity:0}
+  }
+
+  /* ---------- 抖动 ---------- */
+  body.shake{animation:shk .55s linear}
+  @keyframes shk{
+    0%,100%{transform:translate(0,0)}
+    12%{transform:translate(-9px,5px)}
+    28%{transform:translate(8px,-7px)}
+    44%{transform:translate(-6px,-6px)}
+    62%{transform:translate(7px,6px)}
+    80%{transform:translate(-4px,3px)}
+  }
+
+  /* ---------- 弹窗 ---------- */
+  #modal{
+    position:fixed;inset:0;z-index:120;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(4,4,6,.78);
+    backdrop-filter:blur(6px);
+    padding:24px;
+    animation:fadeIn .28s ease-out;
+  }
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .mbox{
+    width:min(460px,100%);
+    background:#0d0e0b;
+    border:1px solid rgba(198,255,74,.28);
+    padding:26px 24px 22px;
+    box-shadow:0 24px 80px rgba(0,0,0,.8);
+  }
+  .mbox h2{margin:0 0 14px;font-size:16px;letter-spacing:.16em;color:var(--acid);font-weight:700}
+  .mbox p{margin:0 0 11px;font-size:13px;line-height:1.8;color:#b3b0a5}
+  .mbox button{
+    margin-top:12px;width:100%;padding:11px;
+    background:transparent;border:1px solid rgba(198,255,74,.4);
+    color:var(--acid);font-family:inherit;font-size:12.5px;letter-spacing:.2em;
+    cursor:pointer;transition:.22s;
+  }
+  .mbox button:hover{background:rgba(198,255,74,.1)}
+
+  /* ---------- 坍缩结局 ---------- */
+  #collapse{
+    position:fixed;inset:0;z-index:200;
+    background:#f2f0e9;color:#111;
+    display:flex;align-items:center;justify-content:center;
+    padding:28px;
+    animation:collapseIn .5s ease-out;
+  }
+  @keyframes collapseIn{from{opacity:0;filter:brightness(4)}to{opacity:1;filter:brightness(1)}}
+  .cbox{width:min(520px,100%);font-family:"PingFang SC","Hiragino Sans GB",serif}
+  .cmicro{font-size:10px;letter-spacing:.44em;color:#8d8a80;margin:0 0 18px}
+  .cbox h2{
+    margin:0 0 20px;font-size:clamp(34px,7vw,58px);
+    letter-spacing:.02em;font-weight:900;line-height:1.1;
+    border-bottom:3px solid #111;padding-bottom:14px;
+  }
+  .cbox p{margin:0 0 13px;font-size:14px;line-height:1.85;color:#26241f}
+  .csmall{font-size:11.5px !important;color:#8d8a80 !important;letter-spacing:.08em}
+  #restart{
+    margin-top:22px;padding:13px 22px;
+    background:#111;color:#f2f0e9;border:none;
+    font-family:inherit;font-size:12.5px;letter-spacing:.24em;
+    cursor:pointer;transition:.2s;
+  }
+  #restart:hover{background:#c6ff4a;color:#111}
+
+  @media (max-width:520px){
+    #btn{width:132px;height:132px;font-size:26px}
+    #title{top:9vh}
+    #sub{bottom:13vh}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001s !important}
+  }
+</style>
+</head>
+<body>
+
+<canvas id="noise"></canvas>
+<div id="grid"></div>
+<div id="glow"></div>
+
+<header id="hud">
+  <div class="cell"><span class="lab">宇宙稳定度</span><span class="val" id="stab">99.97%</span></div>
+  <div class="meter"><i id="meterFill"></i></div>
+  <div class="cell r"><span class="lab">观测次数</span><span class="val" id="count">0</span></div>
+</header>
+
+<p id="kicker">编号 0000-Ω · 绝密 · 编号本身也是绝密</p>
+<h1 id="title">请勿按下<span>这个按钮</span></h1>
+
+<button id="btn" type="button" aria-label="按"><span id="btnWord">按</span></button>
+
+<p id="sub">本按钮已通过 ISO 9001 认证。</p>
+
+<div id="staminaBox">
+  <span>它的体力</span>
+  <div class="sbar"><i id="staminaFill"></i></div>
+  <span class="sval" id="staminaVal">100</span>
+</div>
+
+<footer id="foot">
+  <span>本页面不存在。如果它存在，请立即关闭。</span>
+  <button id="aboutBtn" type="button">关于本页</button>
+</footer>
+
+<div id="eyes"></div>
+
+<div id="modal" class="hidden">
+  <div class="mbox">
+    <h2>关于本页</h2>
+    <p>本页面由一位不愿透露姓名的实习生在一个周二的下午 3 点 47 分创建，用于研究「人类是否会按下一个被明确要求不要按的按钮」。</p>
+    <p>研究结果表明：会。平均用时 1.4 秒。</p>
+    <p>有 3 名被试在看到按钮之前就已经按了。其中一名按的是自己的水杯。</p>
+    <p>该实习生现已调岗。调去了一个没有按钮的部门。</p>
+    <button id="modalClose" type="button">我什么都没看见</button>
+  </div>
+</div>
+
+<div id="collapse" class="hidden">
+  <div class="cbox">
+    <p class="cmicro">事件报告 · 已归档 · 归档人也已归档</p>
+    <h2>你按了。</h2>
+    <p>宇宙已于刚才关闭。关闭原因：有人按了按钮。</p>
+    <p>已通知：没有人。通知被取消。</p>
+    <p>你按下的那一刻，南极洲有 4 只企鹅同时停止了打字。它们此前也没有在打字。</p>
+    <p class="csmall">剩余稳定度 0.00%　剩余耐心 0.00%　剩余周一 1 个（不可退换）</p>
+    <button id="restart" type="button">重启宇宙（其实只是刷新）</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ================= 工具 ================= */
+  function $(id){ return document.getElementById(id); }
+  function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+
+  var AC = null;
+  function ac(){
+    if (AC === null){
+      try { AC = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch(e){ AC = false; }
+    }
+    return AC;
+  }
+  function tone(freq, dur, type, vol, slideTo){
+    var c = ac();
+    if (!c) return;
+    try{
+      var o = c.createOscillator();
+      var g = c.createGain();
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(freq, c.currentTime);
+      if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, c.currentTime + dur);
+      g.gain.setValueAtTime(vol || 0.1, c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + dur);
+      o.connect(g); g.connect(c.destination);
+      o.start(); o.stop(c.currentTime + dur + 0.02);
+    }catch(e){}
+  }
+
+  /* ================= 噪点 ================= */
+  var canvas = $('noise');
+  var nctx = canvas.getContext('2d');
+  function paintNoise(){
+    var w = Math.max(2, Math.ceil(window.innerWidth / 2));
+    var h = Math.max(2, Math.ceil(window.innerHeight / 2));
+    canvas.width = w; canvas.height = h;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    var img = nctx.createImageData(w, h);
+    var d = img.data;
+    for (var i = 0; i < d.length; i += 4){
+      var v = Math.random() * 255;
+      d[i] = v; d[i+1] = v; d[i+2] = v; d[i+3] = 255;
+    }
+    nctx.putImageData(img, 0, 0);
+  }
+  paintNoise();
+
+  /* ================= 状态 ================= */
+  var state = {
+    count: 0,
+    stability: 99.97,
+    stamina: 100,
+    collapsed: false,
+    lastAction: Date.now()
+  };
+
+  var btn = $('btn');
+  var btnWord = $('btnWord');
+  var countEl = $('count');
+  var stabEl = $('stab');
+  var meterFill = $('meterFill');
+  var subEl = $('sub');
+  var titleEl = $('title');
+  var staminaFill = $('staminaFill');
+  var staminaVal = $('staminaVal');
+  var bx = 0, by = 0;
+
+  /* ================= 文案库 ================= */
+  var SUBS = [
+    '本按钮已通过 ISO 9001 认证。',
+    '按了会发生什么，我们也不知道，我们也很害怕。',
+    '上一个按它的人，现在在卖保险。',
+    '根据《宇宙管理条例》第 3 条，此按钮不应存在。',
+    '它没有用。它只是想被按。',
+    '此按钮由 37 只猫投票产生，票数 41。',
+    '警告：本按钮可能含有按钮。',
+    '它昨天梦到自己被人按了一下，然后吓醒了，然后哭了。',
+    '按下即视为同意某些条款。条款原文已遗失。',
+    '本按钮不含乳制品，不含咖啡因，不含意义。',
+    '此处原本放着一台复印机。复印机自己走了。',
+    '请不要拍照。闪光灯会让它想起一些事。'
+  ];
+
+  var WORDS = ['按','摁','碰','拍','戳','走你','别','求你了','轻点','试试','算了','来嘛'];
+
+  var TOASTS = [
+    '叮。',
+    '你听到了一声很轻的、来自冰箱的叹气。',
+    '远方的某台服务器打了个喷嚏。401 台服务受影响。',
+    '南极洲的一只企鹅停止了打字。它此前也没有在打字。',
+    '你的银行余额没有变化，但它知道了。',
+    '天花板上出现了一只不属于任何已知物种的虫子。它也在看着你。',
+    '周一被整体推迟了 0.3 秒。没人发现，除了保洁阿姨。',
+    '有人在群里 @ 了你，但消息被宇宙回收了。',
+    '你妈刚刚想起了你。她决定不打电话。',
+    '系统提示：你已成功浪费 1 次机会。剩余 999999 次。',
+    '一只看不见的手替你把手机亮度调低了 3%。',
+    '隔壁楼的一个陌生人突然觉得应该洗个碗。',
+    '你按下的一瞬间，有一棵树决定不长了。',
+    '本次操作已被记录在案。记录本遗失了。',
+    '马桶在你家制造了一声很远的回响。',
+    '一只猫在地球的某个角落，对空气眨了眨眼。那是给你眨的。',
+    '你获得了「按按钮的人」称号。有效期 0.7 秒。',
+    '警告：此操作在 1997 年已被另一人执行过。他至今还在填写表格。',
+    '有个声音说「够了」。它没有具体对象。'
+  ];
+
+  var WHISPERS = ['不要按','够了','停下来','为什么','又来了','它有感觉','求你了','别'];
+
+  /* ================= 渲染 ================= */
+  function renderStability(){
+    var p = Math.max(0, Math.min(100, state.stability));
+    stabEl.textContent = p.toFixed(2) + '%';
+    meterFill.style.width = p + '%';
+    if (p < 30) stabEl.style.color = '#ff3b30';
+    else if (p < 60) stabEl.style.color = '#ffb03b';
+    else stabEl.style.color = '';
+  }
+
+  function renderStamina(){
+    var s = Math.max(0, Math.min(100, state.stamina));
+    staminaFill.style.width = s + '%';
+    staminaVal.textContent = Math.round(s);
+    if (s <= 0){
+      staminaFill.style.background = '#ff3b30';
+      btn.classList.add('tired');
+    } else if (s < 35){
+      staminaFill.style.background = '#c9a13b';
+      btn.classList.remove('tired');
+    } else {
+      staminaFill.style.background = '#8ea53f';
+      btn.classList.remove('tired');
+    }
+  }
+
+  function setSub(text){
+    subEl.classList.add('swap');
+    window.setTimeout(function(){
+      subEl.textContent = text;
+      subEl.classList.remove('swap');
+    }, 220);
+  }
+
+  /* ================= 按钮躲避 ================= */
+  function applyPos(){
+    btn.style.setProperty('--bx', bx + 'px');
+    btn.style.setProperty('--by', by + 'px');
+  }
+
+  function dodge(dx, dy, randomDir){
+    if (state.collapsed) return;
+    if (state.stamina <= 0) return;
+    var ang;
+    if (randomDir){
+      ang = Math.random() * Math.PI * 2;
+    } else {
+      ang = Math.atan2(dy, dx) + (Math.random() - 0.5) * 1.05;
+    }
+    var step = randomDir ? (48 + Math.random() * 86) : (104 + Math.random() * 150);
+    var hw = Math.max(18, window.innerWidth / 2 - 110);
+    var hh = Math.max(18, window.innerHeight * 0.5 - 152);
+
+    var nx = bx + Math.cos(ang) * step;
+    var ny = by + Math.sin(ang) * step;
+    bx = Math.max(-hw, Math.min(hw, nx));
+    by = Math.max(-hh, Math.min(hh, ny));
+    applyPos();
+
+    state.stamina = Math.max(0, state.stamina - (randomDir ? 5 : 9));
+    renderStamina();
+  }
+
+  var lastDodge = 0;
+  window.addEventListener('mousemove', function(e){
+    if (state.collapsed) return;
+    var now = (window.performance && performance.now) ? performance.now() : Date.now();
+    if (now - lastDodge < 250) return;
+
+    var r = btn.getBoundingClientRect();
+    var cx = r.left + r.width / 2;
+    var cy = r.top + r.height / 2;
+    var dx = cx - e.clientX;
+    var dy = cy - e.clientY;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist < 195){
+      if (state.stamina <= 0) return;
+      if (Math.random() < 0.2) return;
+      dodge(dx, dy, false);
+      lastDodge = now;
+    }
+  }, { passive: true });
+
+  /* 体力缓慢恢复 */
+  window.setInterval(function(){
+    if (state.collapsed) return;
+    state.stamina = Math.min(100, state.stamina + 2.2);
+    renderStamina();
+  }, 190);
+
+  /* ================= 飘字 ================= */
+  var activeToasts = 0;
+  function toast(){
+    if (activeToasts > 7) return;
+    var el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = pick(TOASTS);
+
+    var w = window.innerWidth, h = window.innerHeight;
+    var left = 6 + Math.random() * Math.max(1, w - 360);
+    var top = 14 + Math.random() * Math.max(1, h - 260);
+    el.style.left = Math.max(8, Math.min(left, w - 240)) + 'px';
+    el.style.top = top + 'px';
+    el.style.transform = 'rotate(' + ((Math.random() - 0.5) * 3.4).toFixed(2) + 'deg)';
+
+    document.body.appendChild(el);
+    activeToasts++;
+
+    window.setTimeout(function(){
+      el.classList.add('out');
+      window.setTimeout(function(){
+        if (el.parentNode) el.parentNode.removeChild(el);
+        activeToasts--;
+      }, 520);
+    }, 2600 + Math.random() * 900);
+  }
+
+  /* ================= 异象 ================= */
+  var eyeBox = $('eyes');
+
+  function anomalyEyes(){
+    eyeBox.innerHTML = '';
+    for (var i = 0; i < 44; i++){
+      var e = document.createElement('div');
+      e.className = 'eye';
+      e.style.left = (Math.random() * 96) + 'vw';
+      e.style.top = (Math.random() * 94) + 'vh';
+      e.style.animationDelay = (Math.random() * 1.1) + 's';
+      var sc = 0.6 + Math.random() * 0.9;
+      e.style.transform = 'scale(' + sc.toFixed(2) + ')';
+      eyeBox.appendChild(e);
+    }
+    eyeBox.classList.add('on');
+    tone(120, 0.6, 'sine', 0.06, 60);
+    window.setTimeout(function(){
+      eyeBox.classList.remove('on');
+      window.setTimeout(function(){ eyeBox.innerHTML = ''; }, 600);
+    }, 1400);
+  }
+
+  function anomalyInvert(){
+    document.body.style.filter = 'invert(1) hue-rotate(80deg)';
+    tone(880, 0.16, 'square', 0.05, 220);
+    window.setTimeout(function(){ document.body.style.filter = ''; }, 1150);
+  }
+
+  function anomalyShake(){
+    document.body.classList.add('shake');
+    tone(70, 0.4, 'sawtooth', 0.06);
+    window.setTimeout(function(){ document.body.classList.remove('shake'); }, 580);
+  }
+
+  function anomalyWhispers(){
+    for (var i = 0; i < 9; i++){
+      (function(i){
+        window.setTimeout(function(){
+          var w = document.createElement('div');
+          w.className = 'whisper';
+          w.textContent = pick(WHISPERS);
+          w.style.top = (8 + Math.random() * 82) + 'vh';
+          w.style.setProperty('--r', ((Math.random() - 0.5) * 22).toFixed(1) + 'deg');
+          w.style.opacity = 0.25 + Math.random() * 0.55;
+          document.body.appendChild(w);
+          window.setTimeout(function(){ if (w.parentNode) w.parentNode.removeChild(w); }, 3600);
+        }, i * 190);
+      })(i);
+    }
+  }
+
+  var originalTitle = titleEl.innerHTML;
+  function anomalyGlitch(){
+    titleEl.classList.add('glitching');
+    var chars = '请勿按下这个按钮Ω█▓▒░のﾊｷﾑ';
+    var n = 0;
+    var timer = window.setInterval(function(){
+      var out = '';
+      for (var i = 0; i < 8; i++){
+        out += Math.random() < 0.42 ? chars.charAt(Math.floor(Math.random() * chars.length)) : originalTitle.replace(/<[^>]+>/g, '').charAt(i);
+      }
+      titleEl.textContent = out;
+      if (++n > 11){
+        window.clearInterval(timer);
+        titleEl.innerHTML = originalTitle;
+        titleEl.classList.remove('glitching');
+      }
+    }, 95);
+    tone(1500, 0.07, 'square', 0.03);
+  }
+
+  function anomalySpawn(){
+    var d = document.createElement('div');
+    d.style.cssText = 'position:fixed;z-index:55;pointer-events:none;font-size:64px;filter:blur(.4px);opacity:.5;left:' +
+      (Math.random() * 80) + 'vw;top:' + (Math.random() * 74) + 'vh;transform:rotate(' + ((Math.random()-0.5)*40) + 'deg)';
+    d.textContent = pick(['◉','◎','?','؟','⌾','⍟']);
+    document.body.appendChild(d);
+    window.setTimeout(function(){ if (d.parentNode) d.parentNode.removeChild(d); }, 2200);
+  }
+
+  var ANOMALIES = [anomalyEyes, anomalyInvert, anomalyShake, anomalyWhispers, anomalyGlitch, anomalySpawn];
+
+  function anomaly(){
+    if (state.collapsed) return;
+    pick(ANOMALIES)();
+  }
+
+  /* ================= 按下 ================= */
+  function press(){
+    if (state.collapsed) return;
+
+    state.count += 1;
+    countEl.textContent = state.count;
+    state.lastAction = Date.now();
+
+    var drop = 8 + Math.random() * 5.5;
+    state.stability = Math.max(0, state.stability - drop);
+    renderStability();
+
+    tone(200 + Math.random() * 90, 0.14, 'square', 0.07, 90);
+    tone(620, 0.06, 'triangle', 0.04);
+
+    btn.classList.remove('hit');
+    void btn.offsetWidth;
+    btn.classList.add('hit');
+
+    btnWord.textContent = pick(WORDS);
+
+    toast();
+    setSub(pick(SUBS));
+
+    if (state.count % 3 === 0) anomaly();
+
+    if (state.stability <= 0){
+      collapse();
+      return;
+    }
+
+    if (Math.random() < 0.5){
+      window.setTimeout(function(){ dodge(0, 0, true); }, 90);
+    }
+  }
+
+  btn.addEventListener('click', function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    press();
+  });
+
+  window.addEventListener('keydown', function(e){
+    if (e.code === 'Space' || e.key === ' ' || e.key === 'Enter'){
+      e.preventDefault();
+      press();
+    }
+  });
+
+  /* ================= 坍缩 ================= */
+  function collapse(){
+    state.collapsed = true;
+    document.body.style.filter = '';
+    eyeBox.innerHTML = '';
+    eyeBox.classList.remove('on');
+
+    var toasts = document.querySelectorAll('.toast, .whisper');
+    for (var i = 0; i < toasts.length; i++){
+      if (toasts[i].parentNode) toasts[i].parentNode.removeChild(toasts[i]);
+    }
+
+    tone(400, 1.6, 'sawtooth', 0.09, 40);
+    window.setTimeout(function(){ tone(120, 1.2, 'sine', 0.09, 30); }, 260);
+
+    document.getElementById('collapse').classList.remove('hidden');
+  }
+
+  $('restart').addEventListener('click', function(){
+    window.location.reload();
+  });
+
+  /* ================= 关于 ================= */
+  $('aboutBtn').addEventListener('click', function(){
+    $('modal').classList.remove('hidden');
+    state.lastAction = Date.now();
+  });
+  $('modalClose').addEventListener('click', function(){
+    $('modal').classList.add('hidden');
+    state.lastAction = Date.now();
+  });
+  $('modal').addEventListener('click', function(e){
+    if (e.target === $('modal')) $('modal').classList.add('hidden');
+  });
+
+  /* ================= 冷落检测 ================= */
+  var idleFired = [false, false, false];
+  var IDLE_TEXTS = [
+    '你已经有一会儿没按了。它在看着你。',
+    '它以为你不喜欢它了。它开始反思自己存在的意义。',
+    '空气安静得有点过分。按钮轻轻挪动了 0.5 毫米，想引起你的注意。'
+  ];
+  window.setInterval(function(){
+    if (state.collapsed) return;
+    var idle = Date.now() - state.lastAction;
+    if (idle > 12000 && !idleFired[0]){ idleFired[0] = true; setSub(IDLE_TEXTS[0]); }
+    if (idle > 26000 && !idleFired[1]){ idleFired[1] = true; setSub(IDLE_TEXTS[1]); }
+    if (idle > 44000 && !idleFired[2]){ idleFired[2] = true; setSub(IDLE_TEXTS[2]); dodge(0, 0, true); }
+  }, 1500);
+
+  /* ================= 启动 ================= */
+  renderStability();
+  renderStamina();
+  applyPos();
+  window.setTimeout(function(){ setSub(pick(SUBS)); }, 2400);
+
+  window.addEventListener('resize', function(){
+    paintNoise();
+    bx = 0; by = 0; applyPos();
+  });
+
+  if (window.console && console.log){
+    console.log('%c请勿按下这个按钮。', 'color:#c6ff4a;font-size:16px;');
+    console.log('%c你已经在控制台里了。这里也没有出口。', 'color:#6f6c64;');
+  }
+})();
+</script>
+</body>
+</html>
